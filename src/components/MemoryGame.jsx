@@ -3,7 +3,7 @@ import '../styles/MemoryGame.css';
 
 const colors = ['#FF5733', '#33FF57', '#3357FF', '#FF33A6', '#F3FF33', '#33FFF6', '#A6FF33', '#33A6FF'];
 
-function MemoryGame() {
+function MemoryGame({ onFinish }) { // Add onFinish as a prop
   const [grid, setGrid] = useState(Array(16).fill(null));
   const [selectedBoxes, setSelectedBoxes] = useState([]);
   const [score, setScore] = useState(0);
@@ -63,16 +63,16 @@ function MemoryGame() {
     // Decrease attemptsLeft after each attempt
     const newAttemptsLeft = attemptsLeft - 1;
     setAttemptsLeft(newAttemptsLeft);
-
-    // Check if attempts are exhausted
-    if (newAttemptsLeft === 0 && !gameWon) {
-      alert(`Game Over! Session ID: ${sessionId}. You have run out of attempts. Please proceed to the interface for your report.`);
-    }
-
     // Check for win condition (8 pairs match)
     if (score + 1 === 8) {
       setGameWon(true); // Set gameWon to true when player wins
-      alert(`Congratulations! You've won! Session ID: ${sessionId}. Please proceed to the interface for your report.`);
+      alert(`Congratulations! You've won! Please proceed to the interface for your report.`);
+      if (onFinish) onFinish(score); // Call onFinish with the winning score
+    }
+    // Check if attempts are exhausted
+    else if (newAttemptsLeft === 0 && !gameWon) {
+      alert(`Game Over! Session ID: You have run out of attempts. Please proceed to the interface for your report.`);
+      if (onFinish) onFinish(score); // Call onFinish with the final score
     }
   }
 

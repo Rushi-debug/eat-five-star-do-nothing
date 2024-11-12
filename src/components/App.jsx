@@ -1,75 +1,104 @@
 import React, { useState } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 import StartScreen from './StartScreen';
 import Quiz from './Quiz';
 import AnimalGame from './AnimalGame';
 import MemoryGame from './MemoryGame';
 import Report from './Report';
-import { v4 as uuidv4 } from 'uuid'; // Import UUID library for unique session IDs
 import '../styles/App.css';
 
 function App() {
   const [gameStage, setGameStage] = useState('start');
+  const [isAdmin, setIsAdmin] = useState(false); // Track if admin is logged in
+  const [currentSessionId, setCurrentSessionId] = useState(null);
   const [currentSessionData, setCurrentSessionData] = useState({
-    sessionId: '',
     quizScores: [],
     animalGameScore: 0,
-    memoryGameScore: 0
+    memoryGameScore: 0,
+    expressionTally: { quiz: 0, animalGame: 0, memoryGame: 0 }
   });
-  const [allSessions, setAllSessions] = useState([]); // Array to hold all session data
+  const [allSessions, setAllSessions] = useState([]);
+  const [selectedSession, setSelectedSession] = useState(null);
 
-  // Start a new game session with a unique session ID
+  // Handle admin login
+  const handleAdminLogin = () => {
+    setIsAdmin(true); // Set admin mode
+  };
+
   const handleStartQuiz = () => {
-    const newSessionId = uuidv4(); // Generate unique session ID
+    const newSessionId = `session_${Date.now()}`;
+    setCurrentSessionId(newSessionId);
     setCurrentSessionData({
-      sessionId: newSessionId,
       quizScores: [],
       animalGameScore: 0,
-      memoryGameScore: 0
+      memoryGameScore: 0,
+      expressionTally: { quiz: 0, animalGame: 0, memoryGame: 0 }
     });
     setGameStage('quiz');
+    alert(`Starting new session with ID: ${newSessionId}`);
   };
 
-  // Admin Login - navigate to Report screen
-  const handleAdminLogin = () => {
-    setGameStage('report');
-  };
-
-  // End of Quiz, move to Level 2: Animal Game
-  const handleQuizEnd = (score) => {
-    setCurrentSessionData((prev) => ({
+  const handleQuizEnd = (score, expressionTally) => {
+    setCurrentSessionData(prev => ({
       ...prev,
-      quizScores: [...prev.quizScores, score]
+      quizScores: [...prev.quizScores, score],
+      expressionTally: { ...prev.expressionTally, quiz: expressionTally }
     }));
     setGameStage('animalGame');
   };
 
-  // End of Animal Game, move to Level 3: Memory Game
-  const handleAnimalGameEnd = (score) => {
-    setCurrentSessionData((prev) => ({ ...prev, animalGameScore: score }));
+  const handleAnimalGameEnd = (score, expressionTally) => {
+    setCurrentSessionData(prev => ({
+      ...prev,
+      animalGameScore: score,
+      expressionTally: { ...prev.expressionTally, animalGame: expressionTally }
+    }));
     setGameStage('memoryGame');
   };
 
-  // End of Memory Game, save session data and show Report
-  const handleMemoryGameEnd = (score) => {
+  const handleMemoryGameEnd = (score, expressionTally) => {
     const completedSessionData = {
+      sessionId: currentSessionId,
       ...currentSessionData,
-      memoryGameScore: score
+      memoryGameScore: score,
+      expressionTally: { ...currentSessionData.expressionTally, memoryGame: expressionTally }
     };
 
-    // Add the completed session to allSessions
-    setAllSessions((prev) => [...prev, completedSessionData]);
-    setGameStage('report');
+    setAllSessions(prev => [...prev, completedSessionData]);
+    setGameStage('start'); // Go back to home screen after memory game ends
+  };
+
+  const handleViewSessionReport = (session) => {
+    setSelectedSession(session);
+  };
+
+  const handleBackToStart = () => {
+    setGameStage('start');
+    setSelectedSession(null);
+    setIsAdmin(false); // Reset admin view when going back
   };
 
   return (
     <div className="app">
-      {gameStage === 'start' && (
-        <StartScreen onStartQuiz={handleStartQuiz} onAdminLogin={handleAdminLogin} />
+      {isAdmin ? (
+        // Show Report component for admin view
+        <Report
+          allSessions={allSessions}
+          selectedSession={selectedSession}
+          onViewSessionReport={handleViewSessionReport}
+          onBackToHome={handleBackToStart}
+        />
+      ) : (
+        // Regular game flow
+        <>
+          {gameStage === 'start' && (
+            <StartScreen onStartQuiz={handleStartQuiz} onAdminLogin={handleAdminLogin} />
+          )}
+          {gameStage === 'quiz' && <Quiz onQuizEnd={handleQuizEnd} />}
+          {gameStage === 'animalGame' && <AnimalGame onFinish={handleAnimalGameEnd} />}
+          {gameStage === 'memoryGame' && <MemoryGame onFinish={handleMemoryGameEnd} />}
+        </>
       )}
-      {gameStage === 'quiz' && <Quiz onQuizEnd={handleQuizEnd} />}
-      {gameStage === 'animalGame' && <AnimalGame onFinish={handleAnimalGameEnd} />}
-      {gameStage === 'memoryGame' && <MemoryGame onFinish={handleMemoryGameEnd} />}
-      {gameStage === 'report' && <Report allSessions={allSessions} />}
     </div>
   );
 }
